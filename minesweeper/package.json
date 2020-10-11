@@ -1,0 +1,11 @@
+{
+  "name": "mindesweeper",
+  "version": "1.0.0",
+  "description": "Eine kleine Coding Coding Challenge in dem ich einen Minesweeper Klon mit p5js baue.",
+  "main": "sketch.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
