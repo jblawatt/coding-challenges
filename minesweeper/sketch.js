@@ -1,19 +1,30 @@
 
-
 COLOR_DEFAULT = 255;
 COLOR_REVEALED = 220;
-COLOR_BOMB = 200;
+COLOR_BOMB = 'red';
 COLOR_TEXT = 70;
-COLOR_FLAG = 50;
+COLOR_FLAG = 'lime';
+COLOR_BACKGROUND = 30;
 
 KEY_LEFT_CTRL = 17;
 
-const resetColor = () => {
+FIELD_HEIGHT = 500;
+FIELD_WIDTH = 500;
+
+FIELD_ROWS = 20;
+FIELD_BOMBS = 50;
+
+const resetOutput = () => {
     fill(COLOR_DEFAULT);
+    stroke(0);
+    strokeWeight(1);
 }
 
-
 class Cell {
+
+    /**
+     * @param {Grid} grid
+     */
     constructor(grid, x, y, height, width, positionX, positionY) {
         this.grid = grid;
         this.x = x;
@@ -32,7 +43,7 @@ class Cell {
             fill(COLOR_REVEALED);
         }
         rect(this.x, this.y, this.width, this.height);
-        resetColor();
+        resetOutput();
         if (this.isRevealed) {
             if (this.isBomb) {
                 // draw the bomb
@@ -41,30 +52,29 @@ class Cell {
                     this.x + (this.width / 2),
                     this.y + (this.height / 2)
                     , 20);
-                resetColor();
+                resetOutput();
             } else {
                 // draw the neighbours
-                var neighbours = this.neighbours(g);
+                const neighbours = this.neighbours();
                 if (neighbours > 0) {
                     textAlign(CENTER);
                     fill(COLOR_TEXT);
                     text(neighbours,
-                        this.x + (this.width / 2) + 5,
-                        this.y + (this.height / 2) + 5,
+                        this.x + (this.width / 2),
+                        this.y + (this.height / 2),
                     )
-                    resetColor();
+                    resetOutput();
                 }
             }
         } else {
             if (this.isFlagged) {
-                // draw the flag if it's a bomb
-                textAlign(CENTER);
-                fill(COLOR_FLAG);
-                text('?',
-                    this.x + (this.width / 2) + 5,
-                    this.y + (this.height / 2) + 5,
-                )
-                resetColor();
+                fill(COLOR_BOMB);
+                strokeWeight(5);
+                stroke('red');
+                line(this.x + 5, this.y + 5, this.x + this.width - 5, this.y + this.height - 5, 75);
+                line(this.x + 5, this.y + this.height - 5, this.x + this.width - 5, this.y + 5, 75);
+                strokeWeight(1);
+                resetOutput();
             }
         }
     }
@@ -107,17 +117,17 @@ class Cell {
 
 class Grid {
 
-    constructor(height, width, bombs, cellCount) {
+    constructor(height, width, bombs, fieldSize) {
         this.height = height;
         this.width = width;
         this.cells = [];
-        this.cellNumbers = cellCount;
-        var cellWidth = this.height / this.cellNumbers;
-        var cellHeight = this.width / this.cellNumbers;
+        this.fieldSize = fieldSize;
+        var cellWidth = this.height / this.fieldSize;
+        var cellHeight = this.width / this.fieldSize;
 
         // construct cells
-        for (var i = 0; i < this.cellNumbers; i++) {
-            for (var j = 0; j < this.cellNumbers; j++) {
+        for (var i = 0; i < this.fieldSize; i++) {
+            for (var j = 0; j < this.fieldSize; j++) {
                 this.cells.push(new Cell(
                     this,
                     cellWidth * j,
@@ -144,11 +154,11 @@ class Grid {
     }
 
     get(x, y) {
-        // fixme: inperfomant
+        // fixme: inperformant
         var wrapper = [];
         var clone = [...this.cells];
         while (clone.length) {
-            wrapper.push(clone.splice(0, this.cellNumbers));
+            wrapper.push(clone.splice(0, this.fieldSize));
         }
         try {
             return wrapper[x][y];
@@ -164,57 +174,88 @@ class Grid {
     revealNeighbours(cell) {
         [-1, 0, 1].forEach(xAdd => {
             [-1, 0, 1].forEach(yAdd => {
-                var c2 = g.get(cell.positionX + xAdd, cell.positionY + yAdd);
-                if (c2 && !c2.isRevealed) {
-                    c2.reveal();
-                    if (c2.neighbours(g) == 0) {
-                        this.revealNeighbours(c2);
+                var cellInner = this.get(cell.positionX + xAdd, cell.positionY + yAdd);
+                if (cellInner != null && !cellInner.isRevealed) {
+                    cellInner.reveal();
+                    if (cellInner.neighbours() == 0) {
+                        this.revealNeighbours(cellInner);
                     }
                 }
             });
         });
     }
 
+    /**
+     * @param {Cell} c
+     */
+    _handleClick(c) {
+        c.reveal();
+        if (c.isBomb) {
+            this.cells.forEach(cc => cc.reveal());
+        } else {
+            var n = c.neighbours();
+            if (n == 0) {
+                this.revealNeighbours(c);
+            }
+        }
+    }
 
-    onMouseClicked(x, y) {
+    _handleMark(c) {
+        c.toggleFlag();
+    }
+
+    onMousePressed(x, y) {
         this.cells.forEach(c => {
             if (c.contains(x, y)) {
                 if (mouseButton === LEFT && !keyIsDown(KEY_LEFT_CTRL)) {
-                    c.reveal();
-                    if (c.isBomb) {
-                        this.cells.forEach(cc => cc.reveal());
-                    } else {
-                        var n = c.neighbours();
-                        if (n == 0) {
-                            this.revealNeighbours(c);
-                        }
-                    }
+                    this._handleClick(c);
                 }
                 if (mouseButton === LEFT && keyIsDown(KEY_LEFT_CTRL)) {
-                    c.toggleFlag();
+                    this._handleMark(c);
                 }
             }
         })
     }
 }
 
-FIELD_HEIGHT = 500;
-FIELD_WIDTH = 500;
-
-
-var g = null;
-
-function setup() {
-    createCanvas(FIELD_WIDTH, FIELD_HEIGHT);
-    g = new Grid(FIELD_WIDTH, FIELD_HEIGHT, 50, 20);
+class Game {
+    constructor(width, height, bombs, rows) {
+        this.grid = null;
+        this.width = width;
+        this.height = height;
+        this.bombs = bombs;
+        this.rows = rows;
+    }
+    setup() {
+        frameRate(10);
+        createCanvas(this.width, this.height);
+        this.grid = new Grid(this.width, this.height, this.bombs, this.rows);
+    }
+    draw() {
+        background(COLOR_BACKGROUND)
+        resetOutput();
+        this.grid.draw();
+    }
+    onMousePressed() {
+        this.grid.onMousePressed(mouseX, mouseY)
+    }
 }
 
-function mousePressed() {
-    g.onMouseClicked(mouseX, mouseY);
+const game = new Game(
+    FIELD_WIDTH,
+    FIELD_HEIGHT,
+    FIELD_BOMBS,
+    FIELD_ROWS
+);
+
+function setup() {
+    game.setup();
 }
 
 function draw() {
-    background(30);
-    fill(255);
-    g.draw();
+    game.draw();
+}
+
+function mousePressed() {
+    game.onMousePressed();
 }
