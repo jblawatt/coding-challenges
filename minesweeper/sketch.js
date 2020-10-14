@@ -5,19 +5,55 @@ COLOR_BOMB = 'red';
 COLOR_TEXT = 70;
 COLOR_FLAG = 'lime';
 COLOR_BACKGROUND = 30;
+COLOR_CROSS = 'red';
+
+STROKE_WEIGHT_CROSS = 8;
 
 KEY_LEFT_CTRL = 17;
 
-FIELD_HEIGHT = 500;
-FIELD_WIDTH = 500;
+FIELD_HEIGHT = 800;
+FIELD_WIDTH = 800;
 
 FIELD_ROWS = 20;
 FIELD_BOMBS = 50;
+
+FONT_SIZE = 20;
 
 const resetOutput = () => {
     fill(COLOR_DEFAULT);
     stroke(0);
     strokeWeight(1);
+    textSize(FONT_SIZE);
+}
+
+
+class Bomb {
+    /**
+     * @param {Cell} cell
+     */
+    constructor(cell) {
+        this.cell = cell;
+    }
+
+    draw() {
+
+    }
+
+}
+
+
+class Flag {
+    /**
+     * @param {Cell} cell
+     */
+    constructor(cell) {
+        this.cell = cell;
+    }
+
+    draw() {
+
+    }
+
 }
 
 class Cell {
@@ -47,17 +83,22 @@ class Cell {
         if (this.isRevealed) {
             if (this.isBomb) {
                 // draw the bomb
+                const b = new Bomb(this);
+                b.draw();
+                image(this.grid.game.bombImage, this.x + 5, this.y + 5, this.width - 10 , this.height - 10);
+                /*
                 fill(COLOR_BOMB);
                 circle(
                     this.x + (this.width / 2),
                     this.y + (this.height / 2)
                     , 20);
+                */
                 resetOutput();
             } else {
                 // draw the neighbours
                 const neighbours = this.neighbours();
                 if (neighbours > 0) {
-                    textAlign(CENTER);
+                    textAlign(CENTER, CENTER);
                     fill(COLOR_TEXT);
                     text(neighbours,
                         this.x + (this.width / 2),
@@ -68,12 +109,27 @@ class Cell {
             }
         } else {
             if (this.isFlagged) {
-                fill(COLOR_BOMB);
-                strokeWeight(5);
-                stroke('red');
-                line(this.x + 5, this.y + 5, this.x + this.width - 5, this.y + this.height - 5, 75);
-                line(this.x + 5, this.y + this.height - 5, this.x + this.width - 5, this.y + 5, 75);
+                /**
+                strokeWeight(STROKE_WEIGHT_CROSS);
+                stroke(COLOR_CROSS);
+                const borderDistance = 10;
+                line(
+                    this.x + borderDistance,
+                    this.y + borderDistance,
+                    this.x + this.width - borderDistance,
+                    this.y + this.height - borderDistance,
+                    75
+                );
+                line(
+                    this.x + borderDistance,
+                    this.y + this.height - borderDistance,
+                    this.x + this.width - borderDistance,
+                    this.y + borderDistance,
+                    75
+                );
                 strokeWeight(1);
+                **/
+               image(this.grid.game.pinImage, this.x + 10, this.y + 5, this.width - 20, this.height - 10);
                 resetOutput();
             }
         }
@@ -117,7 +173,12 @@ class Cell {
 
 class Grid {
 
-    constructor(height, width, bombs, fieldSize) {
+    /**
+     * @param {Game} game
+     * @param {Integer} height
+     */
+    constructor(game, height, width, bombs, fieldSize) {
+        this.game = game;
         this.height = height;
         this.width = width;
         this.cells = [];
@@ -225,11 +286,17 @@ class Game {
         this.height = height;
         this.bombs = bombs;
         this.rows = rows;
+        this.bombImage = null;
+        this.pinImage = null;
+    }
+    preload() {
+        this.bombImage = loadImage('images/bomb.png');
+        this.pinImage = loadImage('images/pin2.png');
     }
     setup() {
         frameRate(10);
         createCanvas(this.width, this.height);
-        this.grid = new Grid(this.width, this.height, this.bombs, this.rows);
+        this.grid = new Grid(this, this.width, this.height, this.bombs, this.rows);
     }
     draw() {
         background(COLOR_BACKGROUND)
@@ -247,6 +314,11 @@ const game = new Game(
     FIELD_BOMBS,
     FIELD_ROWS
 );
+
+
+function preload() {
+    game.preload();
+}
 
 function setup() {
     game.setup();
